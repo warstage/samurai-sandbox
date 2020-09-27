@@ -10,7 +10,7 @@
     ],
     "module": "es6",
     "moduleResolution": "node",
-    "outDir": "dist",
+    "outDir": "docs",
     "sourceMap": true,
     "target": "es5",
     "typeRoots": [
@@ -19,6 +19,6 @@
   },
   "exclude": [
     "node_modules",
-    "dist"
+    "docs"
   ]
 }
