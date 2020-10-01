@@ -107,13 +107,11 @@ export class SandboxScenario implements Scenario {
     }
 
     async recreateAlliances() {
-        console.log('recreateAlliances');
         await this.removeAlliances();
         await this.createAlliances();
     }
 
     async removeAlliances() {
-        console.log('removeAlliances');
         for (const object of this.battleFederation.objects<Alliance>('Alliance')) {
             object.$delete();
         }
@@ -126,7 +124,6 @@ export class SandboxScenario implements Scenario {
     }
 
     async createAlliances() {
-        console.log('createAlliances');
         let position = 0;
         for (const team of this.match.teams) {
             const alliance = this.battleFederation.objects<Alliance>('Alliance').create({
@@ -135,7 +132,6 @@ export class SandboxScenario implements Scenario {
             this.createReinforcements(alliance, position);
 
             for (const slot of team.slots) {
-                console.log('slot.playerId:' + slot.playerId);
                 if (slot.playerId) {
                     const commander = this.battleFederation.objects<Commander>('Commander').create({
                         alliance,
