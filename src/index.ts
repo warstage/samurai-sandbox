@@ -1,15 +1,30 @@
 // Copyright Felix Ungman. All rights reserved.
 // Licensed under GNU General Public License version 3 or later.
 
-import {RuntimeConfiguration} from 'warstage-runtime';
-RuntimeConfiguration.autoRedirect();
+import {
+    Alliance,
+    Commander,
+    DeploymentUnit,
+    Federation,
+    getDefaultUnitSize,
+    getDefaultUnitStats,
+    getUnitClass,
+    Match,
+    ObjectRef,
+    RuntimeConfiguration,
+    SamuraiPlatform,
+    SamuraiWeapon,
+    Scenario,
+    ScenarioRunner,
+    Slot,
+    Team,
+    Unit,
+    Value,
+    vec2
+} from 'warstage-runtime';
+import {Subscription} from 'rxjs';
 
-import { Federation, ObjectRef, Value } from 'warstage-runtime';
-import {Scenario, ScenarioRunner} from 'warstage-runtime';
-import { Alliance, Commander, DeploymentUnit, Unit, vec2 } from 'warstage-runtime';
-import { SamuraiPlatform, SamuraiWeapon, getUnitClass, getDefaultUnitSize } from './samurai';
-import { Match, Slot, Team } from 'warstage-runtime';
-import { Subscription } from 'rxjs';
+RuntimeConfiguration.autoRedirect();
 
 export class SandboxScenario implements Scenario {
     private subscription: Subscription;
@@ -85,8 +100,8 @@ export class SandboxScenario implements Scenario {
     }
 
     deployUnit(deploymentUnit: DeploymentUnit, position: vec2) {
-        const platform = deploymentUnit.platform;
-        const weapon = deploymentUnit.weapon;
+        const platform = deploymentUnit.platform as unknown as SamuraiPlatform;
+        const weapon = deploymentUnit.weapon as unknown as SamuraiWeapon;
         const delta = {x: 512 - position.x, y: 512 - position.y};
         const facing = Math.atan2(delta.y, delta.x);
 
@@ -96,11 +111,16 @@ export class SandboxScenario implements Scenario {
             commander = this.battleFederation.objects<Commander>('Commander').find(x => x.alliance === alliance);
         }
 
+        const unitClass = getUnitClass(platform, weapon);
+        const unitStats = getDefaultUnitStats(unitClass);
+        let fighterCount = getDefaultUnitSize(platform, weapon) as number;
+
         this.battleFederation.objects<Unit>('Unit').create({
             alliance,
             commander,
-            'stats.unitClass': getUnitClass(platform, weapon),
-            'stats.fighterCount': getDefaultUnitSize(platform, weapon),
+            'stats.unitClass': unitClass,
+            'stats.unitStats': unitStats,
+            'stats.fighterCount': fighterCount,
             'stats.placement': {x: position.x, y: position.y, z: facing},
             deletable: true
         });
@@ -144,16 +164,16 @@ export class SandboxScenario implements Scenario {
 
     createReinforcements(alliance: Alliance, position: number) {
         this.createReinforcement(alliance, position, 0, 0, 5, SamuraiPlatform.Ashigaru, SamuraiWeapon.Arq);
-        this.createReinforcement(alliance, position, 0, 1, 5, SamuraiPlatform.Samurai, SamuraiWeapon.Arq),
-        this.createReinforcement(alliance, position, 0, 2, 5, SamuraiPlatform.Ashigaru, SamuraiWeapon.Bow),
-        this.createReinforcement(alliance, position, 0, 3, 5, SamuraiPlatform.Samurai, SamuraiWeapon.Bow),
-        this.createReinforcement(alliance, position, 0, 4, 5, SamuraiPlatform.Ashigaru, SamuraiWeapon.Cannon),
+        this.createReinforcement(alliance, position, 0, 1, 5, SamuraiPlatform.Samurai, SamuraiWeapon.Arq);
+        this.createReinforcement(alliance, position, 0, 2, 5, SamuraiPlatform.Ashigaru, SamuraiWeapon.Bow);
+        this.createReinforcement(alliance, position, 0, 3, 5, SamuraiPlatform.Samurai, SamuraiWeapon.Bow);
+        this.createReinforcement(alliance, position, 0, 4, 5, SamuraiPlatform.Ashigaru, SamuraiWeapon.Cannon);
 
-        this.createReinforcement(alliance, position, 1, 0, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Yari),
-        this.createReinforcement(alliance, position, 1, 1, 6, SamuraiPlatform.Samurai, SamuraiWeapon.Yari),
-        this.createReinforcement(alliance, position, 1, 2, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Katana),
-        this.createReinforcement(alliance, position, 1, 3, 6, SamuraiPlatform.Samurai, SamuraiWeapon.Katana),
-        this.createReinforcement(alliance, position, 1, 4, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Naginata),
+        this.createReinforcement(alliance, position, 1, 0, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Yari);
+        this.createReinforcement(alliance, position, 1, 1, 6, SamuraiPlatform.Samurai, SamuraiWeapon.Yari);
+        this.createReinforcement(alliance, position, 1, 2, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Katana);
+        this.createReinforcement(alliance, position, 1, 3, 6, SamuraiPlatform.Samurai, SamuraiWeapon.Katana);
+        this.createReinforcement(alliance, position, 1, 4, 6, SamuraiPlatform.Ashigaru, SamuraiWeapon.Naginata);
         this.createReinforcement(alliance, position, 1, 5, 6, SamuraiPlatform.Samurai, SamuraiWeapon.Naginata);
 
         this.createReinforcement(alliance, position, 2, 0, 5, SamuraiPlatform.Cavalry, SamuraiWeapon.Yari);
@@ -171,10 +191,10 @@ export class SandboxScenario implements Scenario {
 
         this.battleFederation.objects<DeploymentUnit>('DeploymentUnit').create({
             hostingPlayerId: this.playerId,
-            alliance,
+            alliance: alliance,
             position: {x: 512 + radius * Math.cos(radians), y: 512 + radius * Math.sin(radians)},
-            platform,
-            weapon,
+            platform: platform,
+            weapon: weapon,
             reinforcement: true,
             deletable: true
         });
