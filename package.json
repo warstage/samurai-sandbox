@@ -16,7 +16,7 @@
     "README.md"
   ],
   "dependencies": {
-    "warstage-runtime": "^0.1.20"
+    "warstage-runtime": "^0.1.21"
   },
   "devDependencies": {
     "@types/node": "^14.11.10",

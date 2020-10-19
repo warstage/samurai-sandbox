@@ -31,13 +31,14 @@ export class SandboxScenario implements Scenario {
     private match: Match;
     private arenaFederation: Federation;
     private battleFederation: Federation;
-    private playerId: string;
 
+    constructor(private playerId: string) {
+    }
     getParams(): Value {
         return {
             teams: [
-                {slots: [{playerId: null}]},
-                {slots: [{playerId: null}]}
+                {slots: [{playerId: this.playerId}]},
+                {slots: [{playerId: this.playerId}]}
             ],
             teamsMin: 2,
             teamsMax: 99,
@@ -55,8 +56,7 @@ export class SandboxScenario implements Scenario {
         };
     }
 
-    startup(playerId: string, match: ObjectRef, arenaFederation: Federation, battleFederation: Federation) {
-        this.playerId = playerId;
+    startup(match: ObjectRef, arenaFederation: Federation, battleFederation: Federation) {
         this.match = match as Match;
         this.arenaFederation = arenaFederation;
         this.battleFederation = battleFederation;
@@ -110,6 +110,8 @@ export class SandboxScenario implements Scenario {
         if (!commander) {
             commander = this.battleFederation.objects<Commander>('Commander').find(x => x.alliance === alliance);
         }
+
+        console.log('deployUnit, commander=' + (commander ? commander.playerId : 'null'));
 
         const unitClass = getUnitClass(platform, weapon);
         const unitStats = getDefaultUnitStats(unitClass);
@@ -201,4 +203,4 @@ export class SandboxScenario implements Scenario {
     }
 }
 
-new ScenarioRunner(() => new SandboxScenario());
+new ScenarioRunner((playerId: string) => new SandboxScenario(playerId));
