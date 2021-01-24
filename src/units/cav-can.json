@@ -21,7 +21,9 @@
           "initialSpeed": 250.0,
           "hitRadius": 4.0,
           "time": { "aim": 5.0, "release": 1.5, "reload": 5.0 },
-          "trajectoryShape": "cannonball"
+          "trajectoryShape": "cannonball",
+          "releaseShape": "smoke",
+          "impactShape": "smoke"
         }]
       }]
     }],
