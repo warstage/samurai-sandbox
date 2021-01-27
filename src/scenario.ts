@@ -13,6 +13,7 @@ import {
     Unit,
     UnitType,
     Value,
+    Vector,
     vec2
 } from 'warstage-runtime';
 import * as shapes from './shapes';
@@ -52,7 +53,7 @@ export class Scenario {
     startup(match: ObjectRef) {
         this.match = match as Match;
 
-        this.navigator.battle.federation.provideService('LoadTexture', AssetLoader.getServiceProvider());
+        this.navigator.battle.federation.provideService('_LoadTexture', AssetLoader.getServiceProvider());
 
         this.createAlliances().then(() => {}, err => console.error(err));
 
@@ -110,8 +111,8 @@ export class Scenario {
     }
 
     deployUnit(deploymentUnit: DeploymentUnit, position: vec2) {
-        const delta = {x: 512 - position.x, y: 512 - position.y};
-        const facing = Math.atan2(delta.y, delta.x);
+        const delta: vec2 = Vector.sub([512, 512],  position);
+        const facing = Vector.angle(delta);
 
         const alliance = deploymentUnit.alliance;
         const unitType = deploymentUnit.unitType as UnitType;
@@ -126,7 +127,7 @@ export class Scenario {
             commander,
             unitType,
             marker,
-            'stats.placement': {x: position.x, y: position.y, z: facing},
+            'stats.placement': {x: position[0], y: position[1], z: facing},
             deletable: true
         });
     }
@@ -158,7 +159,7 @@ export class Scenario {
 
             for (const slot of team.slots) {
                 if (slot.playerId) {
-                    const commander = this.navigator.battle.federation.objects<Commander>('Commander').create({
+                    /*const commander =*/ this.navigator.battle.federation.objects<Commander>('Commander').create({
                         alliance,
                         playerId: slot.playerId
                     });
@@ -189,16 +190,16 @@ export class Scenario {
     }
 
     createReinforcement(alliance: Alliance, position: number, level: number, index: number, count: number, unit: any) {
-        const placement: vec2 = {x: level, y: count > 1 ? index - 0.5 * (count - 1.0) : 0.0};
-        const radius = 512.0 + 30.0 * (placement.x + 1);
-        const radians = 40.0 * placement.y / radius + (position === 1 ? 1.0 : 3.0) * 0.5 * 3.1415926535;
+        const radius = 512.0 + 30.0 * (level + 1);
+        const place = count > 1 ? index - 0.5 * (count - 1.0) : 0.0;
+        const angle = 40.0 * place / radius + (position === 1 ? 1.0 : 3.0) * 0.5 * 3.1415926535;
 
         this.navigator.battle.federation.objects<DeploymentUnit>('DeploymentUnit').create({
             hostingPlayerId: this.navigator.system.player.playerId,
             alliance: alliance,
             unitType: unit.unitType,
             marker: unit.marker,
-            position: {x: 512 + radius * Math.cos(radians), y: 512 + radius * Math.sin(radians)},
+            position: Vector.add(Vector.fromPolar(radius, angle), [512, 512]),
             reinforcement: true,
             deletable: true
         });
