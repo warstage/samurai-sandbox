@@ -64,9 +64,10 @@
     "training": 0.8
   },
   "shape": {
+    "name": "CAV-CAN",
     "size": [1.0, 3.0, 3.0],
-    "skin": "cav",
-    "line": null
+    "skins": ["<skins/cav.json>"],
+    "lines": null
   },
   "marker": {
     "texture": "markers.png",

@@ -14,16 +14,27 @@ import {
     UnitType,
     Value,
     Vector,
-    vec2
+    vec2, Shape, ValueStruct, Marker, ConfigLoader
 } from 'warstage-runtime';
-import * as shapes from './shapes';
-import * as units from './units';
-import * as skins from './skins';
-import * as lines from './lines';
+export interface ShapeValue extends Shape, ValueStruct {}
+
+interface ConfigUnit {
+    unitType: UnitType;
+    shape: ShapeValue;
+    marker: Marker;
+}
+
+interface Config {
+    particles: { shapes: ShapeValue[] };
+    vegetation: { shapes: ShapeValue[] };
+    units: { [name: string]: ConfigUnit };
+}
 
 export class Scenario {
     private subscription: Subscription;
     private match: Match;
+
+    private config: Config = null;
 
     constructor(private navigator: Navigator) {
     }
@@ -55,8 +66,6 @@ export class Scenario {
 
         this.navigator.battle.federation.provideService('_LoadTexture', AssetLoader.getServiceProvider());
 
-        this.createAlliances().then(() => {}, err => console.error(err));
-
         this.subscription = this.navigator.lobby.federation.objects<Match>('Match').subscribe(() => {
             this.recreateAlliances().then(() => {}, err => console.error(err));
         });
@@ -85,21 +94,25 @@ export class Scenario {
             }
         });
 
-        for (const shape of shapes.vegetation.shapes) {
+        this.loadConfig().then(() => {
+            this.createAlliances().then(() => {}, err => console.error(err));
+        }, err => { console.log(err); })
+    }
+
+    async loadConfig() {
+        const configLoader = new ConfigLoader(AssetLoader.getJsonLoader());
+        this.config = await configLoader.load('config.json') as Config;
+
+        for (const shape of this.config.vegetation.shapes) {
             this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
         }
 
-        for (const shape of shapes.particles.shapes) {
+        for (const shape of this.config.particles.shapes) {
             this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
         }
 
-        for (const unit of Object.values(units)) {
-            this.navigator.battle.federation.objects<ShapeRef>('Shape').create({
-                name: unit.unitType.subunits[0].element.shape,
-                size: unit.shape.size,
-                skins: unit.shape.skin ? [skins[unit.shape.skin]] : null,
-                lines: unit.shape.line ? [lines[unit.shape.line]] : null,
-            });
+        for (const unit of Object.values<ConfigUnit>(this.config.units)) {
+            this.navigator.battle.federation.objects<ShapeRef>('Shape').create(unit.shape);
         }
     }
 
@@ -169,24 +182,24 @@ export class Scenario {
     }
 
     createReinforcements(alliance: Alliance, position: number) {
-        this.createReinforcement(alliance, position, 0, 0, 5, units.sam_arq);
-        this.createReinforcement(alliance, position, 0, 1, 5, units.sam_bow);
-        this.createReinforcement(alliance, position, 0, 2, 5, units.sam_yari);
-        this.createReinforcement(alliance, position, 0, 3, 5, units.sam_kata);
-        this.createReinforcement(alliance, position, 0, 4, 5, units.sam_nagi);
+        this.createReinforcement(alliance, position, 0, 0, 5, this.config.units.sam_arq);
+        this.createReinforcement(alliance, position, 0, 1, 5, this.config.units.sam_bow);
+        this.createReinforcement(alliance, position, 0, 2, 5, this.config.units.sam_yari);
+        this.createReinforcement(alliance, position, 0, 3, 5, this.config.units.sam_kata);
+        this.createReinforcement(alliance, position, 0, 4, 5, this.config.units.sam_nagi);
 
-        this.createReinforcement(alliance, position, 1, 0, 6, units.ash_arq);
-        this.createReinforcement(alliance, position, 1, 1, 6, units.ash_bow);
-        this.createReinforcement(alliance, position, 1, 2, 6, units.ash_yari);
-        this.createReinforcement(alliance, position, 1, 3, 6, units.ash_kata);
-        this.createReinforcement(alliance, position, 1, 4, 6, units.ash_nagi);
-        this.createReinforcement(alliance, position, 1, 5, 6, units.ash_can);
+        this.createReinforcement(alliance, position, 1, 0, 6, this.config.units.ash_arq);
+        this.createReinforcement(alliance, position, 1, 1, 6, this.config.units.ash_bow);
+        this.createReinforcement(alliance, position, 1, 2, 6, this.config.units.ash_yari);
+        this.createReinforcement(alliance, position, 1, 3, 6, this.config.units.ash_kata);
+        this.createReinforcement(alliance, position, 1, 4, 6, this.config.units.ash_nagi);
+        this.createReinforcement(alliance, position, 1, 5, 6, this.config.units.ash_can);
 
-        this.createReinforcement(alliance, position, 2, 0, 5, units.cav_bow);
-        this.createReinforcement(alliance, position, 2, 1, 5, units.cav_yari);
-        this.createReinforcement(alliance, position, 2, 2, 5, units.cav_kata);
-        this.createReinforcement(alliance, position, 2, 3, 5, units.cav_nagi);
-        this.createReinforcement(alliance, position, 2, 4, 5, units.cav_can);
+        this.createReinforcement(alliance, position, 2, 0, 5, this.config.units.cav_bow);
+        this.createReinforcement(alliance, position, 2, 1, 5, this.config.units.cav_yari);
+        this.createReinforcement(alliance, position, 2, 2, 5, this.config.units.cav_kata);
+        this.createReinforcement(alliance, position, 2, 3, 5, this.config.units.cav_nagi);
+        this.createReinforcement(alliance, position, 2, 4, 5, this.config.units.cav_can);
     }
 
     createReinforcement(alliance: Alliance, position: number, level: number, index: number, count: number, unit: any) {

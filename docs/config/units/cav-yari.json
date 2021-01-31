@@ -25,9 +25,10 @@
     "training": 0.8
   },
   "shape": {
+    "name": "CAV-YARI",
     "size": [1.0, 3.0, 3.0],
-    "skin": "cav",
-    "line": "yari"
+    "skins": ["<skins/cav.json>"],
+    "lines": ["<lines/yari.json>"]
   },
   "marker": {
     "texture": "markers.png",
