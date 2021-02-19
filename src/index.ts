@@ -8,7 +8,8 @@ if (!RuntimeConfiguration.tryAutoRedirect()) {
     const runtime = new Runtime();
     runtime.startup(RuntimeConfiguration.autoDetect());
     const navigator = new Navigator(runtime);
-    const scenario = new Scenario(navigator);
+    const search = new URLSearchParams(window.location.search);
+    const scenario = new Scenario(navigator, search.get('mode'));
     navigator.lobby.onEnterLobby.subscribe(async () => {
         const match = await navigator.createMatch(scenario.getParams());
         scenario.startup(match);

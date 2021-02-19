@@ -30,35 +30,60 @@ interface Config {
     units: { [name: string]: ConfigUnit };
 }
 
+enum ScenarioMode { Sandbox = 0, Editor = 1 };
+
 export class Scenario {
     private subscription: Subscription;
     private match: Match;
 
     private config: Config = null;
+    private readonly mode: ScenarioMode = ScenarioMode.Sandbox;
 
-    constructor(private navigator: Navigator) {
+    constructor(private navigator: Navigator, mode: string) {
+        if (mode === 'editor') {
+            this.mode = ScenarioMode.Editor;
+        }
     }
 
     getParams(): Value {
-        return {
-            teams: [
-                {slots: [{playerId: this.navigator.system.player.playerId}]},
-                {slots: [{playerId: this.navigator.system.player.playerId}]}
-            ],
-            teamsMin: 2,
-            teamsMax: 99,
-            title: 'sandbox',
-            map: 'Maps/Map1.png',
-            options: {
-                map: true,
-                teams: true,
-                sandbox: true
-            },
-            settings: {
-                sandbox: true
-            },
-            started: false
-        };
+        switch (this.mode) {
+            case ScenarioMode.Sandbox:
+                return {
+                    teams: [
+                        {slots: [{playerId: this.navigator.system.player.playerId}]},
+                        {slots: [{playerId: this.navigator.system.player.playerId}]}
+                    ],
+                    teamsMin: 2,
+                    teamsMax: 99,
+                    title: 'sandbox',
+                    map: 'Maps/Map1.png',
+                    options: {
+                        map: true,
+                        teams: true,
+                        sandbox: true
+                    },
+                    settings: {
+                        sandbox: true
+                    },
+                    started: false
+                };
+            case ScenarioMode.Editor:
+                return {
+                    teams: [],
+                    teamsMin: 0,
+                    teamsMax: 0,
+                    title: 'editor',
+                    map: 'Maps/Map1.png',
+                    options: {
+                        map: true,
+                        editor: true
+                    },
+                    started: true,
+                    editor: true
+                };
+            default:
+                throw new Error(`Invalid mode ${this.mode}`);
+        }
     }
 
     startup(match: ObjectRef) {
@@ -66,37 +91,47 @@ export class Scenario {
 
         this.navigator.battle.federation.provideService('_LoadTexture', AssetLoader.getServiceProvider());
 
-        this.subscription = this.navigator.lobby.federation.objects<Match>('Match').subscribe(() => {
-            this.recreateAlliances().then(() => {}, err => console.error(err));
-        });
+        if (this.mode === ScenarioMode.Sandbox) {
+            this.subscription = this.navigator.lobby.federation.objects<Match>('Match').subscribe(() => {
+                this.recreateAlliances().then(() => {
+                }, err => console.error(err));
+            });
 
-        this.subscription.add(this.navigator.lobby.federation.objects<Team>('Team').subscribe(() => {
-            this.recreateAlliances().then(() => {}, err => console.error(err));
-        }));
+            this.subscription.add(this.navigator.lobby.federation.objects<Team>('Team').subscribe(() => {
+                this.recreateAlliances().then(() => {
+                }, err => console.error(err));
+            }));
 
-        this.subscription.add(this.navigator.lobby.federation.objects<Slot>('Slot').subscribe(() => {
-            this.recreateAlliances().then(() => {}, err => console.error(err));
-        }));
+            this.subscription.add(this.navigator.lobby.federation.objects<Slot>('Slot').subscribe(() => {
+                this.recreateAlliances().then(() => {
+                }, err => console.error(err));
+            }));
 
-        this.subscription.add(this.navigator.battle.federation.objects<Unit>('Unit').subscribe(unit => {
-            if ((unit.fighters$changed && !unit.fighters) || unit.deletedByGesture) {
-                unit.$delete();
-            }
-        }));
+            this.subscription.add(this.navigator.battle.federation.objects<Unit>('Unit').subscribe(unit => {
+                if ((unit.fighters$changed && !unit.fighters) || unit.deletedByGesture) {
+                    unit.$delete();
+                }
+            }));
 
-        this.navigator.battle.federation.observeEvents('DeployUnit', (params: {
-            deploymentUnit: DeploymentUnit;
-            position: vec2;
-            deleted: boolean;
-        }) => {
-            if (!params.deleted) {
-                this.deployUnit(params.deploymentUnit, params.position);
-            }
-        });
+            this.navigator.battle.federation.observeEvents('DeployUnit', (params: {
+                deploymentUnit: DeploymentUnit;
+                position: vec2;
+                deleted: boolean;
+            }) => {
+                if (!params.deleted) {
+                    this.deployUnit(params.deploymentUnit, params.position);
+                }
+            });
+        }
 
-        this.loadConfig().then(() => {
-            this.createAlliances().then(() => {}, err => console.error(err));
-        }, err => { console.log(err); })
+        this.startupAsync().then(() => {}, err => { console.error(err); })
+    }
+
+    async startupAsync() {
+        await this.loadConfig();
+        if (this.mode === ScenarioMode.Sandbox) {
+            await this.createAlliances();
+        }
     }
 
     async loadConfig() {
@@ -107,12 +142,14 @@ export class Scenario {
             this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
         }
 
-        for (const shape of this.config.particles.shapes) {
-            this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
-        }
+        if (this.mode === ScenarioMode.Sandbox) {
+            for (const shape of this.config.particles.shapes) {
+                this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
+            }
 
-        for (const unit of Object.values<ConfigUnit>(this.config.units)) {
-            this.navigator.battle.federation.objects<ShapeRef>('Shape').create(unit.shape);
+            for (const unit of Object.values<ConfigUnit>(this.config.units)) {
+                this.navigator.battle.federation.objects<ShapeRef>('Shape').create(unit.shape);
+            }
         }
     }
 
