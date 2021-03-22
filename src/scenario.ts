@@ -130,7 +130,7 @@ export class Scenario {
     async startupAsync() {
         await this.loadConfig();
         if (this.mode === ScenarioMode.Sandbox) {
-            await this.createAlliances();
+            await this.recreateAlliances();
         }
     }
 
@@ -185,31 +185,49 @@ export class Scenario {
     async recreateAlliances() {
         await this.removeAlliances();
         await this.createAlliances();
+
+        const alliances = this.navigator.battle.federation.objects<Alliance>('Alliance');
+        for (const alliance of alliances) {
+            this.removeDeploymentUnits(alliance);
+            this.createDeploymentUnits(alliance, this.match.teams.length);
+        }
     }
 
     async removeAlliances() {
-        for (const object of this.navigator.battle.federation.objects<Alliance>('Alliance')) {
-            object.$delete();
-        }
-        for (const object of this.navigator.battle.federation.objects<Commander>('Commander')) {
-            object.$delete();
-        }
-        for (const object of this.navigator.battle.federation.objects<DeploymentUnit>('DeploymentUnit')) {
-            object.$delete();
+        const alliances = this.navigator.battle.federation.objects<Alliance>('Alliance');
+        const commanders = this.navigator.battle.federation.objects<Commander>('Commander');
+        for (const alliance of alliances) {
+            if (!this.match.teams.find(x => x.$id === alliance.teamId)) {
+                this.removeDeploymentUnits(alliance);
+                for (const commander of commanders) {
+                    if (commander.alliance === alliance) {
+                        commander.$delete();
+                    }
+                }
+                alliance.$delete();
+            }
         }
     }
 
     async createAlliances() {
-        let position = 0;
+        const alliances = this.navigator.battle.federation.objects<Alliance>('Alliance');
+        const commanders = this.navigator.battle.federation.objects<Commander>('Commander');
+        let position = 1;
         for (const team of this.match.teams) {
-            const alliance = this.navigator.battle.federation.objects<Alliance>('Alliance').create({
-                position: ++position
-            });
-            this.createReinforcements(alliance, position);
+            let alliance = alliances.find(x => x.teamId === team.$id);
+            if (!alliance) {
+                alliance = alliances.create({
+                    teamId: team.$id,
+                    position: position
+                });
+            } else if (alliance.position !== position) {
+                alliance.position = position;
+            }
+            ++position;
 
             for (const slot of team.slots) {
-                if (slot.playerId) {
-                    /*const commander =*/ this.navigator.battle.federation.objects<Commander>('Commander').create({
+                if (slot.playerId && !commanders.find(x => x.alliance === alliance && x.playerId === slot.playerId)) {
+                    commanders.create({
                         alliance,
                         playerId: slot.playerId
                     });
@@ -218,31 +236,41 @@ export class Scenario {
         }
     }
 
-    createReinforcements(alliance: Alliance, position: number) {
-        this.createReinforcement(alliance, position, 0, 0, 5, this.config.units.sam_arq);
-        this.createReinforcement(alliance, position, 0, 1, 5, this.config.units.sam_bow);
-        this.createReinforcement(alliance, position, 0, 2, 5, this.config.units.sam_yari);
-        this.createReinforcement(alliance, position, 0, 3, 5, this.config.units.sam_kata);
-        this.createReinforcement(alliance, position, 0, 4, 5, this.config.units.sam_nagi);
-
-        this.createReinforcement(alliance, position, 1, 0, 6, this.config.units.ash_arq);
-        this.createReinforcement(alliance, position, 1, 1, 6, this.config.units.ash_bow);
-        this.createReinforcement(alliance, position, 1, 2, 6, this.config.units.ash_yari);
-        this.createReinforcement(alliance, position, 1, 3, 6, this.config.units.ash_kata);
-        this.createReinforcement(alliance, position, 1, 4, 6, this.config.units.ash_nagi);
-        this.createReinforcement(alliance, position, 1, 5, 6, this.config.units.ash_can);
-
-        this.createReinforcement(alliance, position, 2, 0, 5, this.config.units.cav_bow);
-        this.createReinforcement(alliance, position, 2, 1, 5, this.config.units.cav_yari);
-        this.createReinforcement(alliance, position, 2, 2, 5, this.config.units.cav_kata);
-        this.createReinforcement(alliance, position, 2, 3, 5, this.config.units.cav_nagi);
-        this.createReinforcement(alliance, position, 2, 4, 5, this.config.units.cav_can);
+    removeDeploymentUnits(alliance: Alliance) {
+        const deploymentUnits = this.navigator.battle.federation.objects<DeploymentUnit>('DeploymentUnit');
+        for (const deploymentUnit of deploymentUnits) {
+            if (deploymentUnit.alliance === alliance) {
+                deploymentUnit.$delete();
+            }
+        }
     }
 
-    createReinforcement(alliance: Alliance, position: number, level: number, index: number, count: number, unit: any) {
+    createDeploymentUnits(alliance: Alliance, allianceCount: number) {
+        this.createDeploymentUnit(alliance, allianceCount, 0, 0, 5, this.config.units.sam_arq);
+        this.createDeploymentUnit(alliance, allianceCount, 0, 1, 5, this.config.units.sam_bow);
+        this.createDeploymentUnit(alliance, allianceCount, 0, 2, 5, this.config.units.sam_yari);
+        this.createDeploymentUnit(alliance, allianceCount, 0, 3, 5, this.config.units.sam_kata);
+        this.createDeploymentUnit(alliance, allianceCount, 0, 4, 5, this.config.units.sam_nagi);
+
+        this.createDeploymentUnit(alliance, allianceCount, 1, 0, 6, this.config.units.ash_arq);
+        this.createDeploymentUnit(alliance, allianceCount, 1, 1, 6, this.config.units.ash_bow);
+        this.createDeploymentUnit(alliance, allianceCount, 1, 2, 6, this.config.units.ash_yari);
+        this.createDeploymentUnit(alliance, allianceCount, 1, 3, 6, this.config.units.ash_kata);
+        this.createDeploymentUnit(alliance, allianceCount, 1, 4, 6, this.config.units.ash_nagi);
+        this.createDeploymentUnit(alliance, allianceCount, 1, 5, 6, this.config.units.ash_can);
+
+        this.createDeploymentUnit(alliance, allianceCount, 2, 0, 5, this.config.units.cav_bow);
+        this.createDeploymentUnit(alliance, allianceCount, 2, 1, 5, this.config.units.cav_yari);
+        this.createDeploymentUnit(alliance, allianceCount, 2, 2, 5, this.config.units.cav_kata);
+        this.createDeploymentUnit(alliance, allianceCount, 2, 3, 5, this.config.units.cav_nagi);
+        this.createDeploymentUnit(alliance, allianceCount, 2, 4, 5, this.config.units.cav_can);
+    }
+
+    createDeploymentUnit(alliance: Alliance, allianceCount: number, level: number, index: number, count: number, unit: any) {
         const radius = 512.0 + 30.0 * (level + 1);
+
         const place = count > 1 ? index - 0.5 * (count - 1.0) : 0.0;
-        const angle = 40.0 * place / radius + (position === 1 ? 1.0 : 3.0) * 0.5 * 3.1415926535;
+        const angle = 40.0 * place / radius + (0.25 + (alliance.position - 1) / allianceCount) * 2.0 * 3.1415926535;
 
         this.navigator.battle.federation.objects<DeploymentUnit>('DeploymentUnit').create({
             hostingPlayerId: this.navigator.system.player.playerId,
