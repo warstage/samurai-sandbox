@@ -1,32 +1,18 @@
 import {Subscription} from 'rxjs';
-import {
-    Alliance,
-    AssetLoader,
-    Commander,
-    DeploymentUnit,
-    Match,
-    Navigator,
-    ObjectRef,
-    ShapeRef,
-    Slot,
-    Team,
-    Unit,
-    UnitType,
-    Value,
-    Vector,
-    vec2, Shape, ValueStruct, Marker, ConfigLoader
-} from 'warstage-runtime';
-export interface ShapeValue extends Shape, ValueStruct {}
+import {Alliance, Commander, DeploymentUnit, Marker, Shape, Unit, UnitType} from 'warstage-battle-model';
+import {Match, Slot, Team} from 'warstage-lobby-model';
+import {Entity, Value, vec2, Vector} from 'warstage-entities';
+import {AssetLoader, ConfigLoader, Navigator} from 'warstage-runtime';
 
 interface ConfigUnit {
     unitType: UnitType;
-    shape: ShapeValue;
+    shape: Shape;
     marker: Marker;
 }
 
 interface Config {
-    particles: { shapes: ShapeValue[] };
-    vegetation: { shapes: ShapeValue[] };
+    particles: { shapes: Shape[] };
+    vegetation: { shapes: Shape[] };
     units: { [name: string]: ConfigUnit };
 }
 
@@ -86,7 +72,7 @@ export class Scenario {
         }
     }
 
-    startup(match: ObjectRef) {
+    startup(match: Entity<Match>) {
         this.match = match as Match;
 
         this.navigator.battle.federation.provideService('_LoadTexture', AssetLoader.getServiceProvider());
@@ -114,7 +100,7 @@ export class Scenario {
             }));
 
             this.navigator.battle.federation.observeEvents('DeployUnit', (params: {
-                deploymentUnit: DeploymentUnit;
+                deploymentUnit: Entity<DeploymentUnit>;
                 position: vec2;
                 deleted: boolean;
             }) => {
@@ -139,16 +125,16 @@ export class Scenario {
         this.config = await configLoader.load('config.json') as Config;
 
         for (const shape of this.config.vegetation.shapes) {
-            this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
+            this.navigator.battle.federation.objects<Shape>('Shape').create(shape);
         }
 
         if (this.mode === ScenarioMode.Sandbox) {
             for (const shape of this.config.particles.shapes) {
-                this.navigator.battle.federation.objects<ShapeRef>('Shape').create(shape);
+                this.navigator.battle.federation.objects<Shape>('Shape').create(shape);
             }
 
             for (const unit of Object.values<ConfigUnit>(this.config.units)) {
-                this.navigator.battle.federation.objects<ShapeRef>('Shape').create(unit.shape);
+                this.navigator.battle.federation.objects<Shape>('Shape').create(unit.shape);
             }
         }
     }
@@ -160,7 +146,7 @@ export class Scenario {
         }
     }
 
-    deployUnit(deploymentUnit: DeploymentUnit, position: vec2) {
+    deployUnit(deploymentUnit: Entity<DeploymentUnit>, position: vec2) {
         const delta: vec2 = Vector.sub([512, 512],  position);
         const facing = Vector.angle(delta);
 
