@@ -16,15 +16,4 @@ if (!RuntimeConfiguration.tryAutoRedirect()) {
             scenario.startup(match);
         }
     });
-    navigator.battle.onEnterBattle.subscribe(() => {
-    });
-    navigator.lobby.onLeaveMatch.subscribe(() => {
-        scenario.shutdown();
-        scenario = null;
-        navigator.system.federation.requestService('EnterLobby', {
-            lobbyId: '000000000000000000000001' // samuraiwars.net online lobby-id
-        }).then(() => {}, err => {
-            console.error(err);
-        })
-    });
 }
